@@ -107,7 +107,8 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
 
     # Report planner instructions
     planner_message = """Generate the sections of the report. Your response must include a 'sections' field containing a list of sections. 
-                        Each section must have: name, description, research, and content fields."""
+                        Each section must have: name, description, research, and content fields.
+                        **Write all content in Korean language.**"""
 
     # Run the planner
     if planner_model == "claude-3-7-sonnet-latest":
@@ -298,7 +299,7 @@ async def write_section(state: SectionState, config: RunnableConfig) -> Command[
     writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
 
     section_content = await writer_model.ainvoke([SystemMessage(content=section_writer_instructions),
-                                           HumanMessage(content=section_writer_inputs_formatted)])
+                                           HumanMessage(content=section_writer_inputs_formatted + "\n**Write the section content in Korean language.**")])
     
     # Write content to the section object  
     section.content = section_content.content
@@ -378,7 +379,7 @@ async def write_final_sections(state: SectionState, config: RunnableConfig):
     writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
     
     section_content = await writer_model.ainvoke([SystemMessage(content=system_instructions),
-                                           HumanMessage(content="Generate a report section based on the provided sources.")])
+                                           HumanMessage(content="Generate a report section based on the provided sources. **Write all content in Korean language.**")])
     
     # Write content to section 
     section.content = section_content.content
