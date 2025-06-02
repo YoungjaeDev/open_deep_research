@@ -21,21 +21,19 @@ def get_search_tool(config: RunnableConfig):
 
     # TODO: Configure other search functions as tools
     if search_api.lower() == "tavily":
-        # Use Tavily search tool
         return tavily_search
     elif search_api.lower() == "duckduckgo":
-        # Use the DuckDuckGo search tool
         return duckduckgo_search
     else:
-        # Raise NotImplementedError for search APIs other than Tavily
         raise NotImplementedError(
             f"The search API '{search_api}' is not yet supported in the multi-agent implementation. "
-            f"Currently, only Tavily is supported. Please use the graph-based implementation in "
-            f"src/open_deep_research/graph.py for other search APIs, or set search_api to 'tavily'."
+            f"Currently, only Tavily/DuckDuckGo is supported. Please use the graph-based implementation in "
+            f"src/open_deep_research/graph.py for other search APIs, or set search_api to 'tavily' or 'duckduckgo'."
         )
 
 @tool
 class Section(BaseModel):
+    """Section of the report."""
     name: str = Field(
         description="Name for this section of the report.",
     )
@@ -48,12 +46,14 @@ class Section(BaseModel):
 
 @tool
 class Sections(BaseModel):
+    """List of section titles of the report."""
     sections: List[str] = Field(
         description="Sections of the report.",
     )
 
 @tool
 class Introduction(BaseModel):
+    """Introduction to the report."""
     name: str = Field(
         description="Name for the report.",
     )
@@ -63,6 +63,7 @@ class Introduction(BaseModel):
 
 @tool
 class Conclusion(BaseModel):
+    """Conclusion to the report."""
     name: str = Field(
         description="Name for the conclusion of the report.",
     )
