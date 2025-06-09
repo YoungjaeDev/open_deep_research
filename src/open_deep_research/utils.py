@@ -1253,6 +1253,7 @@ async def duckduckgo_search(search_queries: List[str]):
             while retry_count <= max_retries:
                 try:
                     results = []
+                    # duckduckgo-search 라이브러리는 웹사이트의 HTML 코드를 직접 가져와서 원하는 데이터를 추출
                     with DDGS() as ddgs:
                         # Change query slightly and add delay between retries
                         if retry_count > 0:
@@ -1432,7 +1433,7 @@ async def azureaisearch_search(queries: List[str], max_results: int = 5, topic: 
         return "No valid search results found. Please try different search queries or use a different search API."
 
 
-async def select_and_execute_search(search_api: str, query_list: list[str], params_to_pass: dict) -> str:
+async def select_and_execute_search(search_api: List[str], query_list: list[str], params_to_pass: dict) -> str:
     """Select and execute the appropriate search API.
     
     Args:
@@ -1446,6 +1447,9 @@ async def select_and_execute_search(search_api: str, query_list: list[str], para
     Raises:
         ValueError: If an unsupported search API is specified
     """
+
+    # tool_node = ToolNode(tavily, ducducgo) 
+
     print(f"query_list: {query_list} params_to_pass: {params_to_pass}")
     if search_api == "tavily":
         # Tavily search tool used with both workflow and agent 
