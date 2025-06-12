@@ -115,7 +115,7 @@ async def supervisor(state: ReportState, config: RunnableConfig):
     
     # If sections have been completed, but we don't yet have the final report, then we need to initiate writing the introduction and conclusion
     if state.get("completed_sections") and not state.get("final_report"):
-        research_complete_message = {"role": "user", "content": "Research is complete. Now write the introduction and conclusion for the report. Here are the completed main body sections: \n\n" + "\n\n".join([s.content for s in state["completed_sections"]])}
+        research_complete_message = {"role": "user", "content": "Research is complete. Now write the introduction and conclusion for the report. Here are the completed main body sections: \n\n" + "\n\n".join([s.content for s in state["completed_sections"]]) + "\n\n**Please respond in Korean language.**"}
         messages = messages + [research_complete_message]
 
     # Get tools based on configuration
@@ -124,10 +124,10 @@ async def supervisor(state: ReportState, config: RunnableConfig):
     # Invoke
     return {
         "messages": [
-            await llm.bind_tools(supervisor_tool_list, parallel_tool_calls=False).ainvoke(
+            await llm.bind_tools(supervisor_tool_list).ainvoke(
                 [
                     {"role": "system",
-                     "content": SUPERVISOR_INSTRUCTIONS,
+                     "content": SUPERVISOR_INSTRUCTIONS + "\n\n**Always respond in Korean language.**",
                     }
                 ]
                 + messages
@@ -235,7 +235,7 @@ async def research_agent(state: SectionState, config: RunnableConfig):
             await llm.bind_tools(research_tool_list).ainvoke(
                 [
                     {"role": "system",
-                     "content": RESEARCH_INSTRUCTIONS.format(section_description=state["section"])
+                     "content": RESEARCH_INSTRUCTIONS.format(section_description=state["section"]) + "\n\n**Always respond in Korean language.**"
                     }
                 ]
                 + state["messages"]
