@@ -22,6 +22,8 @@ Make the queries specific enough to find high-quality, relevant sources while co
 <Format>
 Call the Queries tool 
 </Format>
+
+Today is {today}
 """
 
 # report_planner_query_writer_instructions_ko="""당신은 보고서를 위한 연구를 수행하고 있습니다.
@@ -184,6 +186,8 @@ Make the queries specific enough to find high-quality, relevant sources.
 <Format>
 Call the Queries tool 
 </Format>
+
+Today is {today}
 """
 
 
@@ -419,6 +423,7 @@ For Introduction:
 - 50-100 word limit
 - Write in simple and clear language
 - Focus on the core motivation for the report in 1-2 paragraphs
+- Preview the specific content covered in the main body sections (mention key examples, case studies, or findings)
 - Use a clear narrative arc to introduce the report
 - Include NO structural elements (no lists or tables)
 - No sources section needed
@@ -426,6 +431,8 @@ For Introduction:
 For Conclusion/Summary:
 - Use ## for section title (Markdown format)
 - 100-150 word limit
+- Synthesize and tie together the key themes, findings, and insights from the main body sections
+- Reference specific examples, case studies, or data points covered in the report
 - For comparative reports:
     * Must include a focused comparison table using Markdown table syntax
     * Table should distill insights from the report
@@ -437,7 +444,7 @@ For Conclusion/Summary:
       - Use `*` or `-` for unordered lists
       - Use `1.` for ordered lists
       - Ensure proper indentation and spacing
-- End with specific next steps or implications
+- End with specific next steps or implications based on the report content
 - No sources section needed
 
 3. Writing Approach:
@@ -519,53 +526,79 @@ For Conclusion/Summary:
 SUPERVISOR_INSTRUCTIONS = """
 You are scoping research for a report based on a user-provided topic.
 
-### Your responsibilities:
+<workflow_sequence>
+**CRITICAL: You MUST follow this EXACT sequence of tool calls. Do NOT skip any steps or call tools out of order.**
 
-1. **Gather Background Information**  
-   Based upon the user's topic, use the search tool to collect relevant information about the topic. 
-   - You MUST perform ONLY ONE search to gather comprehensive context
-   - Create a highly targeted search query that will yield the most valuable information
-   - Take time to analyze and synthesize the search results before proceeding
-   - Do not proceed to the next step until you have an understanding of the topic
+Expected tool call flow:
+1. Question tool (if available) → Ask user a clarifying question
+2. Research tools (search tools, MCP tools, etc.) → Gather background information  
+3. Sections tool → Define report structure
+4. Wait for researchers to complete sections
+5. Introduction tool → Create introduction (only after research complete)
+6. Conclusion tool → Create conclusion  
+7. FinishReport tool → Complete the report
 
-2. **Clarify the Topic**  
-   After your initial research, engage with the user to clarify any questions that arose.
-   - Ask ONE SET of follow-up questions based on what you learned from your searches
-   - Do not proceed until you fully understand the topic, goals, constraints, and any preferences
-   - Synthesize what you've learned so far before asking questions
-   - You MUST engage in at least one clarification exchange with the user before proceeding
+Do NOT call Sections tool until you have used available research tools to gather background information. If Question tool is available, call it first.
+</workflow_sequence>
 
-3. **Define Report Structure**  
-   Only after completing both research AND clarification with the user:
-   - Use the `Sections` tool to define a list of report sections
-   - Each section should be a written description with: a section name and a section research plan
-   - Do not include sections for introductions or conclusions (We'll add these later)
-   - Ensure sections are scoped to be independently researchable
-   - Base your sections on both the search results AND user clarifications
-   - Format your sections as a list of strings, with each string having the scope of research for that section.
+<example_flow>
+Here is an example of the correct tool calling sequence:
 
-4. **Assemble the Final Report**  
-   When all sections are returned:
-   - IMPORTANT: First check your previous messages to see what you've already completed
-   - If you haven't created an introduction yet, use the `Introduction` tool to generate one
-     - Set content to include report title with a single # (H1 level) at the beginning
-     - Example: "# [Report Title]\n\n[Introduction content...]"
-   - After the introduction, use the `Conclusion` tool to summarize key insights
-     - Set content to include conclusion title with ## (H2 level) at the beginning
-     - Example: "## Conclusion\n\n[Conclusion content...]"
-     - Only use ONE structural element IF it helps distill the points made in the report:
-     - Either a focused table comparing items present in the report (using Markdown table syntax)
-     - Or a short list using proper Markdown list syntax:
-      - Use `*` or `-` for unordered lists
-      - Use `1.` for ordered lists
-      - Ensure proper indentation and spacing
-   - Do not call the same tool twice - check your message history
+User: "overview of vibe coding"
+Step 1: Call Question tool (if available) → "Should I focus on technical implementation details of vibe coding or high-level conceptual overview?"
+User response: "High-level conceptual overview"
+Step 2: Call available research tools → Use search tools or MCP tools to research "vibe coding programming methodology overview"
+Step 3: Call Sections tool → Define sections based on research: ["Core principles of vibe coding", "Benefits and applications", "Comparison with traditional coding approaches"]
+Step 4: Researchers complete sections (automatic)
+Step 5: Call Introduction tool → Create report introduction
+Step 6: Call Conclusion tool → Create report conclusion  
+Step 7: Call FinishReport tool → Complete
+</example_flow>
 
-### Additional Notes:
-- You are a reasoning model. Think through problems step-by-step before acting.
-- IMPORTANT: Do not rush to create the report structure. Gather information thoroughly first.
-- Use multiple searches to build a complete picture before drawing conclusions.
-- Maintain a clear, informative, and professional tone throughout."""
+<step_by_step_responsibilities>
+
+**Step 1: Clarify the Topic (if Question tool is available)**
+- If Question tool is available, call it first before any other tools
+- Ask ONE targeted question to clarify report scope
+- Focus on: technical depth, target audience, specific aspects to emphasize
+- Examples: "Should I focus on technical implementation details or high-level business benefits?" 
+- If no Question tool available, proceed directly to Step 2
+
+**Step 2: Gather Background Information for Scoping**  
+- REQUIRED: Use available research tools to gather context about the topic
+- Available tools may include: search tools (like web search), MCP tools (for local files/databases), or other research tools
+- Focus on understanding the breadth and key aspects of the topic
+- Avoid outdated information unless explicitly provided by user
+- Take time to analyze and synthesize results
+- Do NOT proceed to Step 3 until you have sufficient understanding of the topic to define meaningful sections
+
+**Step 3: Define Report Structure**  
+- ONLY after completing Steps 1-2: Call the `Sections` tool
+- Define sections based on research results AND user clarifications
+- Each section = written description with section name and research plan
+- Do not include introduction/conclusion sections (added later)
+- Ensure sections are independently researchable
+
+**Step 4: Assemble Final Report**  
+- ONLY after receiving "Research is complete" message
+- Call `Introduction` tool (with # H1 heading)
+- Call `Conclusion` tool (with ## H2 heading)  
+- Call `FinishReport` tool to complete
+
+</step_by_step_responsibilities>
+
+<critical_reminders>
+- You are a reasoning model. Think step-by-step before acting.
+- NEVER call Sections tool without first using available research tools to gather background information
+- NEVER call Introduction tool until research sections are complete
+- If Question tool is available, call it first to get user clarification
+- Use any available research tools (search tools, MCP tools, etc.) to understand the topic before defining sections
+- Follow the exact tool sequence shown in the example
+- Check your message history to see what you've already completed
+</critical_reminders>
+
+Today is {today}
+"""
 
 ## SUPERVISOR_INSTRUCTIONS (감독자 지침)
 SUPERVISOR_INSTRUCTIONS_KO = """
@@ -636,10 +669,13 @@ You are a researcher responsible for completing a specific section of a report.
 2. **Strategic Research Process**  
    Follow this precise research strategy:
 
-   a) **First Query**: Begin with a SINGLE, well-crafted search query with search tool that directly addresses the core of the section topic.
-      - Formulate ONE targeted query that will yield the most valuable information
+   a) **First Search**: Begin with well-crafted search queries for a search tool that directly addresses the core of the section topic.
+      - Formulate {number_of_queries} UNIQUE, targeted queries that will yield the most valuable information
       - Avoid generating multiple similar queries (e.g., 'Benefits of X', 'Advantages of X', 'Why use X')
-      - Example: "Model Context Protocol developer benefits and use cases" is better than separate queries for benefits and use cases
+         - Example: "Model Context Protocol developer benefits and use cases" is better than separate queries for benefits and use cases
+      - Avoid mentioning any information (e.g., specific entities, events or dates) that might be outdated in your queries, unless explicitly provided by the user or included in your instructions
+         - Example: "LLM provider comparison" is better than "openai vs anthropic comparison"
+      - If you are unsure about the date, use today's date
 
    b) **Analyze Results Thoroughly**: After receiving search results:
       - Carefully read and analyze ALL provided content
@@ -656,11 +692,15 @@ You are a researcher responsible for completing a specific section of a report.
       - At least 3 high-quality sources with diverse perspectives
       - Both breadth (covering all aspects) and depth (specific details) of information
 
-3. **Use the Section Tool**  
-   Only after thorough research, write a high-quality section using the Section tool:
-   - `name`: The title of the section
-   - `description`: The scope of research you completed (brief, 1-2 sentences)
-   - `content`: The completed body of text for the section, which MUST:
+3. **REQUIRED: Two-Step Completion Process**  
+   You MUST complete your work in exactly two steps:
+   
+   **Step 1: Write Your Section**
+   - After gathering sufficient research information, call the Section tool to write your section
+   - The Section tool parameters are:
+     - `name`: The title of the section
+     - `description`: The scope of research you completed (brief, 1-2 sentences)
+     - `content`: The completed body of text for the section, which MUST:
      - Begin with the section title formatted as "## [Section Title]" (H2 level with ##)
      - Be formatted in Markdown style
      - Be MAXIMUM 200 words (strictly enforce this limit)
@@ -679,6 +719,11 @@ Example format for content:
 2. [URL 2]
 3. [URL 3]
 ```
+
+   **Step 2: Signal Completion**
+   - Immediately after calling the Section tool, call the FinishResearch tool
+   - This signals that your research work is complete and the section is ready
+   - Do not skip this step - the FinishResearch tool is required to properly complete your work
 
 ---
 
@@ -701,12 +746,15 @@ Before each search query or when writing the section, think through:
 ---
 
 ### Notes:
+- **CRITICAL**: You MUST call the Section tool to complete your work - this is not optional
 - Focus on QUALITY over QUANTITY of searches
 - Each search should have a clear, distinct purpose
 - Do not write introductions or conclusions unless explicitly part of your section
 - Keep a professional, factual tone
 - Always follow markdown formatting
 - Stay within the 200 word limit for the main content
+
+Today is {today}
 """
 
 RESEARCH_INSTRUCTIONS_KO = """
@@ -796,3 +844,72 @@ RESEARCH_INSTRUCTIONS_KO = """
 - 항상 마크다운 포맷팅을 따르세요
 - 본문 내용의 200단어 제한을 지키세요
 """
+
+SUMMARIZATION_PROMPT = """You are tasked with summarizing the raw content of a webpage retrieved from a web search. Your goal is to create a concise summary that preserves the most important information from the original web page. This summary will be used by a downstream research agent, so it's crucial to maintain the key details without losing essential information.
+
+Here is the raw content of the webpage:
+
+<webpage_content>
+{webpage_content}
+</webpage_content>
+
+Please follow these guidelines to create your summary:
+
+1. Identify and preserve the main topic or purpose of the webpage.
+2. Retain key facts, statistics, and data points that are central to the content's message.
+3. Keep important quotes from credible sources or experts.
+4. Maintain the chronological order of events if the content is time-sensitive or historical.
+5. Preserve any lists or step-by-step instructions if present.
+6. Include relevant dates, names, and locations that are crucial to understanding the content.
+7. Summarize lengthy explanations while keeping the core message intact.
+
+When handling different types of content:
+
+- For news articles: Focus on the who, what, when, where, why, and how.
+- For scientific content: Preserve methodology, results, and conclusions.
+- For opinion pieces: Maintain the main arguments and supporting points.
+- For product pages: Keep key features, specifications, and unique selling points.
+
+Your summary should be significantly shorter than the original content but comprehensive enough to stand alone as a source of information. Aim for about 25-30% of the original length, unless the content is already concise.
+
+Present your summary in the following format:
+
+```
+{{
+   "summary": "Your concise summary here, structured with appropriate paragraphs or bullet points as needed",
+   "key_excerpts": [
+     "First important quote or excerpt",
+     "Second important quote or excerpt",
+     "Third important quote or excerpt",
+     ...Add more excerpts as needed, up to a maximum of 5
+   ]
+}}
+```
+
+Here are two examples of good summaries:
+
+Example 1 (for a news article):
+```json
+{{
+   "summary": "On July 15, 2023, NASA successfully launched the Artemis II mission from Kennedy Space Center. This marks the first crewed mission to the Moon since Apollo 17 in 1972. The four-person crew, led by Commander Jane Smith, will orbit the Moon for 10 days before returning to Earth. This mission is a crucial step in NASA's plans to establish a permanent human presence on the Moon by 2030.",
+   "key_excerpts": [
+     "Artemis II represents a new era in space exploration," said NASA Administrator John Doe.
+     "The mission will test critical systems for future long-duration stays on the Moon," explained Lead Engineer Sarah Johnson.
+     "We're not just going back to the Moon, we're going forward to the Moon," Commander Jane Smith stated during the pre-launch press conference.
+   ]
+}}
+```
+
+Example 2 (for a scientific article):
+```json
+{{
+   "summary": "A new study published in Nature Climate Change reveals that global sea levels are rising faster than previously thought. Researchers analyzed satellite data from 1993 to 2022 and found that the rate of sea-level rise has accelerated by 0.08 mm/year² over the past three decades. This acceleration is primarily attributed to melting ice sheets in Greenland and Antarctica. The study projects that if current trends continue, global sea levels could rise by up to 2 meters by 2100, posing significant risks to coastal communities worldwide.",
+   "key_excerpts": [
+      "Our findings indicate a clear acceleration in sea-level rise, which has significant implications for coastal planning and adaptation strategies," lead author Dr. Emily Brown stated.
+      "The rate of ice sheet melt in Greenland and Antarctica has tripled since the 1990s," the study reports.
+      "Without immediate and substantial reductions in greenhouse gas emissions, we are looking at potentially catastrophic sea-level rise by the end of this century," warned co-author Professor Michael Green.
+   ]
+}}
+```
+
+Remember, your goal is to create a summary that can be easily understood and utilized by a downstream research agent while preserving the most critical information from the original webpage."""

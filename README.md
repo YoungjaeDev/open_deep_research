@@ -149,9 +149,127 @@ The multi-agent implementation uses a supervisor-researcher architecture:
 - **Researcher Agents**: Multiple independent agents work in parallel, each responsible for researching and writing a specific section
 - **Parallel Processing**: All sections are researched simultaneously, significantly reducing report generation time
 - **Specialized Tool Design**: Each agent has access to specific tools for its role (search for researchers, section planning for supervisors)
-- **Currently Limited to Tavily Search**: The multi-agent implementation currently only works with Tavily for search, though the framework is designed to support additional search tools in the future
+- **Search and MCP Support**: Works with Tavily/DuckDuckGo for web search, MCP servers for local/external data access, or can operate without search tools using only MCP tools
 
 This implementation focuses on efficiency and parallelization, making it ideal for faster report generation with less direct user involvement.
+
+You can customize the multi-agent implementation through several parameters:
+
+- `supervisor_model`: Model for the supervisor agent (default: "anthropic:claude-3-5-sonnet-latest")
+- `researcher_model`: Model for researcher agents (default: "anthropic:claude-3-5-sonnet-latest") 
+- `number_of_queries`: Number of search queries to generate per section (default: 2)
+- `search_api`: API to use for web searches (default: "tavily", options include "duckduckgo", "none")
+- `ask_for_clarification`: Whether the supervisor should ask clarifying questions before research (default: false) - **Important**: Set to `true` to enable the Question tool for the supervisor agent
+- `mcp_server_config`: Configuration for MCP servers (optional)
+- `mcp_prompt`: Additional instructions for using MCP tools (optional)
+- `mcp_tools_to_include`: Specific MCP tools to include (optional)
+
+## MCP (Model Context Protocol) Support
+
+The multi-agent implementation (`src/open_deep_research/multi_agent.py`) supports MCP servers to extend research capabilities beyond web search. MCP tools are available to research agents alongside or instead of traditional search tools, enabling access to local files, databases, APIs, and other data sources.
+
+**Note**: MCP support is currently only available in the multi-agent (`src/open_deep_research/multi_agent.py`) implementation, not in the workflow-based workflow implementation (`src/open_deep_research/graph.py`).
+
+### Key Features
+
+- **Tool Integration**: MCP tools are seamlessly integrated with existing search and section-writing tools
+- **Research Agent Access**: Only research agents (not supervisors) have access to MCP tools
+- **Flexible Configuration**: Use MCP tools alone or combined with web search
+- **Disable Default Search**: Set `search_api: "none"` to disable web search tools entirely
+- **Custom Prompts**: Add specific instructions for using MCP tools
+
+### Filesystem Server Example
+
+#### SKK
+
+```python
+config = {
+    "configurable": {
+        "search_api": "none",  # Use "tavily" or "duckduckgo" to combine with web search
+        "mcp_server_config": {
+            "filesystem": {
+                "command": "npx",
+                "args": [
+                    "-y",
+                    "@modelcontextprotocol/server-filesystem",
+                    "/path/to/your/files"
+                ],
+                "transport": "stdio"
+            }
+        },
+        "mcp_prompt": "Step 1: Use the `list_allowed_directories` tool to get the list of allowed directories. Step 2: Use the `read_file` tool to read files in the allowed directory.",
+        "mcp_tools_to_include": ["list_allowed_directories", "list_directory", "read_file"]  # Optional: specify which tools to include
+    }
+}
+```
+
+#### Studio
+
+MCP server config: 
+```
+{
+  "filesystem": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "@modelcontextprotocol/server-filesystem",
+      "/Users/rlm/Desktop/Code/open_deep_research/src/open_deep_research/files"
+    ],
+    "transport": "stdio"
+  }
+}
+```
+
+MCP prompt: 
+```
+CRITICAL: You MUST follow this EXACT sequence when using filesystem tools:
+
+1. FIRST: Call `list_allowed_directories` tool to discover allowed directories
+2. SECOND: Call `list_directory` tool on a specific directory from step 1 to see available files  
+3. THIRD: Call `read_file` tool to read specific files found in step 2
+
+DO NOT call `list_directory` or `read_file` until you have first called `list_allowed_directories`. You must discover the allowed directories before attempting to browse or read files.
+```
+
+MCP tools: 
+```
+list_allowed_directories
+list_directory 
+read_file
+```
+
+Example test topic and follow-up feedback that you can provide that will reference the included file: 
+
+Topic:
+```
+I want an overview of vibe coding
+```
+
+Follow-up to the question asked by the research agent: 
+
+```
+I just want a single section report on vibe coding that highlights an interesting / fun example
+```
+
+Resulting trace: 
+
+https://smith.langchain.com/public/d871311a-f288-4885-8f70-440ab557c3cf/r
+
+### Configuration Options
+
+- **`mcp_server_config`**: Dictionary defining MCP server configurations (see [langchain-mcp-adapters examples](https://github.com/langchain-ai/langchain-mcp-adapters#client-1))
+- **`mcp_prompt`**: Optional instructions added to research agent prompts for using MCP tools
+- **`mcp_tools_to_include`**: Optional list of specific MCP tool names to include (if not set, all tools from all servers are included)
+- **`search_api`**: Set to `"none"` to use only MCP tools, or keep existing search APIs to combine both
+
+### Common Use Cases
+
+- **Local Documentation**: Access project documentation, code files, or knowledge bases
+- **Database Queries**: Connect to databases for specific data retrieval
+- **API Integration**: Access external APIs and services
+- **File Analysis**: Read and analyze local files during research
+
+The MCP integration allows research agents to incorporate local knowledge and external data sources into their research process, creating more comprehensive and context-aware reports.
 
 ## Search API Configuration
 
@@ -200,13 +318,40 @@ groq.APIError: Failed to call a function. Please adjust your prompt. See 'failed
 
 (7) For working with local models via Ollama, see [here](https://github.com/langchain-ai/open_deep_research/issues/65#issuecomment-2743586318).
 
-## Testing Report Quality
+## Evaluation Systems
 
-To compare the quality of reports generated by both implementations:
+Open Deep Research includes two comprehensive evaluation systems to assess report quality and performance:
 
+### 1. Pytest-based Evaluation System
+
+A developer-friendly testing framework that provides immediate feedback during development and testing cycles.
+
+#### **Features:**
+- **Rich Console Output**: Formatted tables, progress indicators, and color-coded results
+- **Binary Pass/Fail Testing**: Clear success/failure criteria for CI/CD integration
+- **LangSmith Integration**: Automatic experiment tracking and logging
+- **Flexible Configuration**: Extensive CLI options for different testing scenarios
+- **Real-time Feedback**: Live output during test execution
+
+#### **Evaluation Criteria:**
+The system evaluates reports against 9 comprehensive quality dimensions:
+- Topic relevance (overall and section-level)
+- Structure and logical flow
+- Introduction and conclusion quality
+- Proper use of structural elements (headers, citations)
+- Markdown formatting compliance
+- Citation quality and source attribution
+- Overall research depth and accuracy
+
+#### **Usage:**
 ```bash
-# Test with default Anthropic models
+# Run all agents with default settings
 python tests/run_test.py --all
+
+# Test specific agent with custom models
+python tests/run_test.py --agent multi_agent \
+  --supervisor-model "anthropic:claude-3-7-sonnet-latest" \
+  --search-api tavily
 
 # Test with OpenAI o3 models
 python tests/run_test.py --all \
@@ -220,7 +365,68 @@ python tests/run_test.py --all \
   --search-api "tavily"
 ```
 
-The test results will be logged to LangSmith, allowing you to compare the quality of reports generated by each implementation with different model configurations.
+#### **Key Files:**
+- `tests/run_test.py`: Main test runner with rich CLI interface
+- `tests/test_report_quality.py`: Core test implementation
+- `tests/conftest.py`: Pytest configuration and CLI options
+
+### 2. LangSmith Evaluate API System
+
+A comprehensive batch evaluation system designed for detailed analysis and comparative studies.
+
+#### **Features:**
+- **Multi-dimensional Scoring**: Four specialized evaluators with 1-5 scale ratings
+- **Weighted Criteria**: Detailed scoring with customizable weights for different quality aspects
+- **Dataset-driven Evaluation**: Batch processing across multiple test cases
+- **Performance Optimization**: Caching with extended TTL for evaluator prompts
+- **Professional Reporting**: Structured analysis with improvement recommendations
+
+#### **Evaluation Dimensions:**
+
+1. **Overall Quality** (7 weighted criteria):
+   - Research depth and source quality (20%)
+   - Analytical rigor and critical thinking (15%)
+   - Structure and organization (20%)
+   - Practical value and actionability (10%)
+   - Balance and objectivity (15%)
+   - Writing quality and clarity (10%)
+   - Professional presentation (10%)
+
+2. **Relevance**: Section-by-section topic relevance analysis with strict criteria
+
+3. **Structure**: Assessment of logical flow, formatting, and citation practices
+
+4. **Groundedness**: Evaluation of alignment with retrieved context and sources
+
+#### **Usage:**
+```bash
+# Run comprehensive evaluation on LangSmith datasets
+python tests/evals/run_evaluate.py
+```
+
+#### **Key Files:**
+- `tests/evals/run_evaluate.py`: Main evaluation script
+- `tests/evals/evaluators.py`: Four specialized evaluator functions
+- `tests/evals/prompts.py`: Detailed evaluation prompts for each dimension
+- `tests/evals/target.py`: Report generation workflows
+
+### When to Use Each System
+
+**Use Pytest System for:**
+- Development and debugging cycles
+- CI/CD pipeline integration
+- Quick model comparison experiments
+- Interactive testing with immediate feedback
+- Gate-keeping before production deployments
+
+**Use LangSmith System for:**
+- Comprehensive model evaluation across datasets
+- Research and analysis of system performance
+- Detailed performance profiling and benchmarking
+- Comparative studies between different configurations
+- Production monitoring and quality assurance
+
+Both evaluation systems complement each other and provide comprehensive coverage for different use cases and development stages.
 
 ## UX
 

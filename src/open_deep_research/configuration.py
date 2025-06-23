@@ -1,11 +1,9 @@
 import os
 from enum import Enum
-from dataclasses import dataclass, fields
-from typing import Any, Optional, Dict 
+from dataclasses import dataclass, fields, field
+from typing import Any, Optional, Dict, Literal
 
-from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.runnables import RunnableConfig
-from dataclasses import dataclass
 
 DEFAULT_REPORT_STRUCTURE = """Use this structure to create a report on the user-provided topic:
 
@@ -41,16 +39,22 @@ class SearchAPI(Enum):
     LINKUP = "linkup"
     DUCKDUCKGO = "duckduckgo"
     GOOGLESEARCH = "googlesearch"
+    NONE = "none"
 
 @dataclass(kw_only=True)
-class Configuration:
-    """The configurable fields for the chatbot."""
+class WorkflowConfiguration:
+    """Configuration for the workflow/graph-based implementation (graph.py)."""
     # Common configuration
-    report_structure: str = DEFAULT_REPORT_STRUCTURE # Defaults to the default report structure
-    search_api: SearchAPI = SearchAPI.TAVILY # Default to TAVILY
+    report_structure: str = DEFAULT_REPORT_STRUCTURE
+    search_api: SearchAPI = SearchAPI.TAVILY
     search_api_config: Optional[Dict[str, Any]] = None
+    process_search_results: Literal["summarize", "split_and_rerank"] | None = None
+    summarization_model_provider: str = "anthropic"
+    summarization_model: str = "claude-3-5-haiku-latest"
+    max_structured_output_retries: int = 3
+    include_source_str: bool = False
     
-    # Graph-specific configuration
+    # Workflow-specific configuration
     number_of_queries: int = 2 # Number of search queries to generate per iteration
     max_search_depth: int = 2 # Maximum number of reflection + search iterations
     # planner_provider: str = "anthropic"  # Defaults to Anthropic as provider
@@ -68,8 +72,8 @@ class Configuration:
     @classmethod
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None
-    ) -> "Configuration":
-        """Create a Configuration instance from a RunnableConfig."""
+    ) -> "WorkflowConfiguration":
+        """Create a WorkflowConfiguration instance from a RunnableConfig."""
         configurable = (
             config["configurable"] if config and "configurable" in config else {}
         )
@@ -79,3 +83,42 @@ class Configuration:
             if f.init
         }
         return cls(**{k: v for k, v in values.items() if v})
+
+@dataclass(kw_only=True)
+class MultiAgentConfiguration:
+    """Configuration for the multi-agent implementation (multi_agent.py)."""
+    # Common configuration
+    search_api: SearchAPI = SearchAPI.TAVILY
+    search_api_config: Optional[Dict[str, Any]] = None
+    process_search_results: Literal["summarize", "split_and_rerank"] | None = None
+    summarization_model_provider: str = "anthropic"
+    summarization_model: str = "claude-3-5-haiku-latest"
+    include_source_str: bool = False
+    
+    # Multi-agent specific configuration
+    number_of_queries: int = 2 # Number of search queries to generate per section
+    supervisor_model: str = "anthropic:claude-3-7-sonnet-latest"
+    researcher_model: str = "anthropic:claude-3-7-sonnet-latest"
+    ask_for_clarification: bool = False # Whether to ask for clarification from the user
+    # MCP server configuration
+    mcp_server_config: Optional[Dict[str, Any]] = None
+    mcp_prompt: Optional[str] = None
+    mcp_tools_to_include: Optional[list[str]] = None
+
+    @classmethod
+    def from_runnable_config(
+        cls, config: Optional[RunnableConfig] = None
+    ) -> "MultiAgentConfiguration":
+        """Create a MultiAgentConfiguration instance from a RunnableConfig."""
+        configurable = (
+            config["configurable"] if config and "configurable" in config else {}
+        )
+        values: dict[str, Any] = {
+            f.name: os.environ.get(f.name.upper(), configurable.get(f.name))
+            for f in fields(cls)
+            if f.init
+        }
+        return cls(**{k: v for k, v in values.items() if v})
+
+# Keep the old Configuration class for backward compatibility
+Configuration = WorkflowConfiguration
