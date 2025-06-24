@@ -18,6 +18,39 @@ python tests/run_test.py --agent multi_agent --supervisor-model "anthropic:claud
 python tests/run_test.py --agent graph --search-api tavily
 """
 
+def get_python_executable():
+    """Get the correct Python executable path.""" 
+    
+    # get_python_executable() 함수 추가: 현재 실행 중인 Python 인터프리터(sys.executable)를 사용하도록 함
+    # pytest 자동 설치: 만약 현재 Python 환경에 pytest가 없다면 자동으로 설치 시도
+
+    # First, try to use the current Python executable (which should be from the active venv)
+    current_python = sys.executable
+    
+    # Verify that this Python has access to pytest
+    try:
+        result = subprocess.run([current_python, "-c", "import pytest"], 
+                              capture_output=True, text=True)
+        if result.returncode == 0:
+            console.print(f"[dim]Using Python: {current_python}[/dim]")
+            return current_python
+    except Exception:
+        pass
+
+
+    # If that fails, try to find pytest in the current environment
+    console.print("[yellow]Warning: Current Python doesn't have pytest, trying to install...[/yellow]")
+    try:
+        # Try to install pytest using the current Python
+        subprocess.run([current_python, "-m", "pip", "install", "pytest"], check=True)
+        console.print("[green]Successfully installed pytest[/green]")
+        return current_python
+    except Exception as e:
+        console.print(f"[red]Failed to install pytest: {e}[/red]")
+        console.print("[red]Please install pytest manually: pip install pytest[/red]")
+        return current_python
+    
+
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Run tests for Open Deep Research with rich console output")
@@ -102,11 +135,14 @@ def main():
 
 def run_test(agent, agent_config, args):
     """Run the pytest with rich console formatting."""
+    # Get the correct Python executable
+    python_executable = get_python_executable()  # 이 줄 추가
+
     # Base pytest options (added -s to disable output capturing)
     base_pytest_options = ["-v", "-s", "--disable-warnings", "--langsmith-output"]
     
     # Build the command
-    cmd = ["python", "-m", "pytest", agent_config["test"]] + base_pytest_options
+    cmd = [python_executable, "-m", "pytest", agent_config["test"]] + base_pytest_options
     
     # Add research agent parameter if needed
     if agent_config["needs_research_agent_param"]:
