@@ -168,7 +168,8 @@ async def get_supervisor_tools(config: RunnableConfig) -> list[BaseTool]:
     if search_tool is not None:
         tools.append(search_tool)  # Add search tool, if available
     existing_tool_names = {cast(BaseTool, tool).name for tool in tools}
-    mcp_tools = await _load_mcp_tools(config, existing_tool_names)
+    # mcp_tools = await _load_mcp_tools(config, existing_tool_names)
+    mcp_tools = []
     tools.extend(mcp_tools)
     return tools
 

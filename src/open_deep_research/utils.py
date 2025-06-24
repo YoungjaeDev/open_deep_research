@@ -42,6 +42,10 @@ from open_deep_research.configuration import Configuration
 from open_deep_research.state import Section
 from open_deep_research.prompts import SUMMARIZATION_PROMPT
 
+import sys
+# Windows에서 ProactorEventLoop 강제 사용
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 def get_config_value(value):
     """
